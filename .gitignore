@@ -1,2 +1,3 @@
 data/
 csv2jay.py
+dask-worker-space/
