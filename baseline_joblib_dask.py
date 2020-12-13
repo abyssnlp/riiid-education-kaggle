@@ -1,5 +1,6 @@
-# Baseline models for answering the question correctly
+# Baseline for riiid with joblib backend for sklearn
 # Author: Shaurya
+
 
 import numpy as np
 import pandas as pd
@@ -16,23 +17,26 @@ from sklearn.model_selection import train_test_split
 from dask_ml.model_selection import train_test_split as dask_split
 import dask
 import dask_xgboost
+import joblib
+from sklearn.linear_model import LogisticRegression
 
-#? Dask client and workers
 client=Client(n_workers=4,threads_per_worker=2,memory_limit='4GB')
 client
 
-# Read in the train
-train=dd.read_parquet("data/train.parquet")
-train.head()
-
-# Questions and lectures metadata
-questions=dd.read_csv("data/questions.csv")
-lectures=dd.read_csv("data/lectures.csv")
-
-# Columns
-train.columns
-questions.columns
-lectures.columns
+# read in with pandas
+dtypes = {
+    "row_id": "int64",
+    "timestamp": "int64",
+    "user_id": "int32",
+    "content_id": "int16",
+    "content_type_id": "boolean",
+    "task_container_id": "int16",
+    "user_answer": "int8",
+    "answered_correctly": "int8",
+    "prior_question_elapsed_time": "float32", 
+    "prior_question_had_explanation": "boolean"
+}
+train=dd.read_parquet("data/train.parquet",dtype=dtypes)
 
 # Run dataset raw on train
 # might need to standardscaler and remove nulls
@@ -45,16 +49,29 @@ X=train[['timestamp','user_id','content_id','content_type_id','task_container_id
 y=train['answered_correctly']
 x_train,x_test,y_train,y_test=dask_split(X,y,test_size=0.2)
 
-x_train.shape
-y_train.shape
+# classifier
+clf=LogisticRegression()
+with joblib.parallel_backend('dask'):
+    clf.fit(x_train,y_train)
 
-# xgboost params
-params={
-    'objective':'binary:logistic',
-    'max_depth':4,
-    'eta':0.01,
-    'subsample':0.5,
-    'min_child_weight':0.5
-}
 
-result=dask_xgboost.train(client,params,x_train,y_train,num_boost_round=10)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
